@@ -1,30 +1,30 @@
-# Intune-Rollout
+# Intune Rollout
 
-## Paket
+## Package
 
 - Detection: `src/intune/Detect-WUHealth.ps1`
 - Remediation: `src/intune/Remediate-WUHealth.ps1`
 
-## Empfohlene Einstellungen
+## Recommended Settings
 
 - Run using logged-on credentials: **No**
 - Run in 64-bit PowerShell: **Yes**
-- Signature check: gemäß Kundenstandard
-- Schedule: Pilot täglich, Produktion nach Change- und Lastbewertung
-- Assignment: Gerätegruppen, nicht Benutzergruppen
+- Signature check: according to customer standard
+- Schedule: pilot daily, production after change and load assessment
+- Assignment: device groups, not user groups
 
-## Rolloutringe
+## Rollout Rings
 
 1. Lab
-2. IT Pilot
-3. Fachbereichspilot
+2. IT pilot
+3. Business-unit pilot
 4. Broad
-5. Kritische Systeme separat oder ausgeschlossen
+5. Critical systems separate or excluded
 
 ## Monitoring
 
-Die Detection schreibt eine kompakte JSON-Ausgabe. Vollständige Details liegen unter `C:\ProgramData\WUHealthSuite`. Exportiere den Device Status regelmäßig und analysiere Status, Modell, BIOS, Storage Provider und RepairCount.
+The detection script writes a compact JSON output. Full details are stored under `C:\ProgramData\WUHealthSuite`. Export the device status regularly and analyze status, model, BIOS, storage provider, and RepairCount.
 
-## Wichtiger Hinweis
+## Important Note
 
-Remediation Scripts dürfen keinen Neustart erzwingen. `RebootRequired` wird lediglich gemeldet und muss über den etablierten Neustartprozess behandelt werden.
+Remediation scripts must not trigger a restart. `RebootRequired` is only reported and must be handled through the established reboot process.

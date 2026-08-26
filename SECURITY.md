@@ -1,3 +1,3 @@
 # Security Policy
 
-Keine Sicherheitslücken oder Kundendaten öffentlich melden. Im privaten Repository den internen Security-/Incident-Prozess verwenden. Scripts vor Deployment reviewen und signieren.
+Do not disclose security vulnerabilities or customer data publicly. Use the internal security/incident process in the private repository. Review and sign scripts before deployment.

@@ -1,9 +1,9 @@
 # Troubleshooting
 
-## Lokale Diagnose
+## Local Diagnosis
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\src	ools\Invoke-WUHealthDiagnostic.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\src\tools\Invoke-WUHealthDiagnostic.ps1
 ```
 
 ## Logs
@@ -15,16 +15,16 @@ powershell.exe -ExecutionPolicy Bypass -File .\src	ools\Invoke-WUHealthDiagnosti
 - Intune IME: `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs`
 - SCCM DCM: `C:\Windows\CCM\Logs\DCMAgent.log`, `CIAgent.log`, `DiscoveryDataManager.log`
 
-## Häufige Fälle
+## Common Cases
 
 ### DISM 0x800f081f
-Repair Source fehlt oder passt nicht. Edition, Architektur, Sprache und Patchstand prüfen.
+The repair source is missing or does not match. Check edition, architecture, language, and patch level.
 
-### Detection läuft in Intune nicht
-IME, Assignment, Lizenz, 64-Bit-Einstellung, Encoding und HealthScripts-Logs prüfen.
+### Detection does not run in Intune
+Check IME, assignment, license, 64-bit setting, encoding, and HealthScripts logs.
 
-### SCCM bleibt Unknown
-Baseline-Evaluation, Client Policy, DCM-Agent-Logs und Script Timeout prüfen.
+### SCCM remains Unknown
+Check baseline evaluation, client policy, DCM agent logs, and script timeout.
 
-### Viele Event 129/153
-Nicht mit wiederholtem DISM überdecken. Storage Controller, NVMe/IRST-Treiber, Firmware, BIOS, Kabel/Backplane und OEM-Diagnose prüfen.
+### Many Event 129/153 entries
+Do not mask this by repeatedly running DISM. Check the storage controller, NVMe/IRST drivers, firmware, BIOS, cables/backplane, and OEM diagnostics.

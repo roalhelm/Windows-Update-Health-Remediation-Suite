@@ -1,19 +1,19 @@
 # Repair Source
 
-Standardmäßig verwendet DISM die konfigurierte Windows-Reparaturquelle. Optional kann eine WIM- oder gemountete Windows-Quelle mit `/Source` verwendet werden.
+By default, DISM uses the configured Windows repair source. Optionally, a WIM or mounted Windows source can be used with `/Source`.
 
-## Anforderungen
+## Requirements
 
-- gleiche Architektur
-- passende Edition und WIM-Index
-- gleiche System-UI-Sprache
-- kompatibler bzw. gepflegter Patchstand
-- erreichbarer, geschützter Pfad
+- same architecture
+- matching edition and WIM index
+- same system UI language
+- compatible and maintained patch level
+- reachable and protected path
 
-## Beispiel
+## Example
 
 ```powershell
-DISM.exe /Online /Cleanup-Image /RestoreHealth /Source:WIM:\serverepair\install.wim:6 /LimitAccess
+DISM.exe /Online /Cleanup-Image /RestoreHealth /Source:WIM:\server\repair\install.wim:6 /LimitAccess
 ```
 
-Die Suite setzt `/LimitAccess` nur, wenn eine explizite Quelle konfiguriert ist.
+The suite sets `/LimitAccess` only when an explicit source is configured.

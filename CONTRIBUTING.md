@@ -1,7 +1,7 @@
 # Contributing
 
-1. Feature Branch erstellen.
-2. Keine kundenspezifischen Daten oder Secrets committen.
-3. PSScriptAnalyzer und Pester ausführen.
-4. Änderungen auf mindestens einem Labgerät testen.
-5. Pull Request mit Risiko, Testfällen und Rollback erstellen.
+1. Create a feature branch.
+2. Do not commit customer-specific data or secrets.
+3. Run PSScriptAnalyzer and Pester.
+4. Test the changes on at least one lab device.
+5. Create a pull request with risk assessment, test cases, and rollback plan.

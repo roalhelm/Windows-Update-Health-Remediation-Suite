@@ -1,20 +1,20 @@
-# Inplace Upgrade als Eskalation
+# In-place Upgrade as Escalation
 
 ## Gate
 
-Nur erwägen, wenn:
+Consider this only when:
 
-- Storage-/Hardware-Risiken bewertet sind
-- ausreichend freier Speicher vorhanden ist
-- Medien zu Architektur, Edition und Sprache passen
-- Kompatibilität geprüft wurde
-- BitLocker, EDR, VPN und kritische Apps bewertet sind
-- Backup/OneDrive-Status und Benutzerkommunikation geklärt sind
+- storage/hardware risks have been assessed
+- sufficient free space is available
+- media matches architecture, edition, and language
+- compatibility has been verified
+- BitLocker, EDR, VPN, and critical apps have been reviewed
+- backup/OneDrive status and end-user communication are clear
 
-## Beispiel, nicht automatisch aktiviert
+## Example, not enabled automatically
 
 ```cmd
 setup.exe /auto upgrade /quiet /eula accept /dynamicupdate enable
 ```
 
-Windows Setup muss anhand der SetupDiag-/Panther-Logs überwacht werden. Ein erneut auffälliger Client wird nicht endlos mit Inplace Upgrades behandelt, sondern als Repeat Offender eskaliert.
+Windows Setup must be monitored using the SetupDiag and Panther logs. A client that remains problematic after another in-place upgrade is not treated endlessly this way; it is escalated as a Repeat Offender.

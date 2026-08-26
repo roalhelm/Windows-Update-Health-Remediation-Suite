@@ -1,23 +1,23 @@
-# Anpassung
+# Customization
 
-## Schwellenwerte
+## Thresholds
 
-`config/HealthConfig.json` enthält zentrale Beispiele. Vor Produktion anpassen:
+`config/HealthConfig.json` contains central examples. Adjust them before production use:
 
 - LookbackDays
 - MinimumFreeSpaceGB
-- Storage Event IDs und Schwellenwerte
+- storage event IDs and thresholds
 - DriverAgeWarningDays
 - RepeatOffenderThreshold
 - Repair Source
 - SFC/Component Cleanup/WU Reset
 
-## Multi-Customer-Betrieb
+## Multi-Customer Operations
 
-Empfohlen:
+Recommended:
 
-- eigener Branch oder kundenspezifische Config
-- keine kundenspezifischen Werte im gemeinsamen Code
-- Releases taggen
-- Changelog pro Kunde
-- signierte Artefakte statt direkter Ausführung aus dem Repository
+- a separate branch or customer-specific configuration
+- no customer-specific values in shared code
+- tag releases
+- maintain a changelog per customer
+- use signed artifacts instead of direct execution from the repository

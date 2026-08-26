@@ -10,7 +10,7 @@ function Get-WUHDefaultConfig {
         DriverAgeWarningDays = 1095; RepeatOffenderThreshold = 2
         RepairHistoryDays = 90; RepairSource = ''; RepairSourceType = 'WindowsUpdate'
         RunSFC = $true; RunComponentCleanup = $false; ResetWindowsUpdateComponents = $false
-        LogRoot = 'C:\ProgramData\WUHealthSuite\Logs'
+        LogRoot = 'C:\ProgramData\Microsoft\IntuneManagementExtension\Logs'
         StatePath = 'C:\ProgramData\WUHealthSuite\State.json'
     }
 }

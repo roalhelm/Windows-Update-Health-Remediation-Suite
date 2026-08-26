@@ -1,14 +1,14 @@
 # Windows Update Health Remediation Suite
 
-Automatisierte Erkennung, Reparatur und Eskalation wiederkehrender Windows-Update-Probleme für **Microsoft Intune** und **Microsoft Configuration Manager (SCCM/MECM)**.
+Automated detection, repair, and escalation of recurring Windows update issues for **Microsoft Intune** and **Microsoft Configuration Manager (SCCM/MECM)**.
 
-> Status: Referenzimplementierung. Vor Produktion immer kundenspezifisch testen, signieren, Change-Prozess durchführen und Pilotgruppen verwenden.
+> Status: Reference implementation. Always test customer-specific settings in production, sign the scripts, follow the change process, and use pilot groups before broad rollout.
 
-## Ziel
+## Objective
 
-Die Suite behandelt einen beschädigten Component Store nicht isoliert, sondern bewertet zusätzlich Storage-, Dateisystem-, Treiber-, Firmware-, Speicherplatz- und Wiederholungsindikatoren. Kritische Storage- oder Gerätefehler werden bewusst **nicht automatisch repariert**, sondern zur Ursachenanalyse eskaliert.
+The suite does not treat a damaged component store in isolation; it also evaluates storage, file system, driver, firmware, free-space, and repeat-failure indicators. Critical storage or device issues are intentionally **not automatically repaired** and are escalated for root-cause analysis.
 
-## Architektur
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -23,65 +23,64 @@ flowchart LR
   V -->|Repeated| E
 ```
 
-## Verzeichnisstruktur
+## Directory Structure
 
-- `src/common`: gemeinsame Health-, Logging- und Repair-Engine
-- `src/intune`: selbständige Detection und Remediation für Intune (Common Engine eingebettet)
-- `src/sccm`: selbständige Discovery und Remediation für Configuration Baselines (Common Engine eingebettet)
-- `src/tools`: lokale Diagnose und Installationshelfer
-- `config`: anpassbare Schwellenwerte
-- `docs`: Architektur, Rollout, Betrieb, Troubleshooting und Sicherheit
-- `tests`: Pester-Smoke-Tests
+- `src/common`: shared health, logging, and repair engine
+- `src/intune`: standalone detection and remediation for Intune (with common engine embedded)
+- `src/sccm`: standalone discovery and remediation for configuration baselines (with common engine embedded)
+- `src/tools`: local diagnostics and installation helpers
+- `config`: configurable thresholds
+- `docs`: architecture, rollout, operations, troubleshooting, and support guidance
+- `tests`: Pester smoke tests
 
-## Schnellstart
+## Quick Start
 
 ### Intune
 
-1. `config/HealthConfig.json` anpassen und den Inhalt bei Bedarf in `src/common/WUHealth.Common.ps1` bzw. die Paketierung integrieren.
-2. `src/intune/Detect-WUHealth.ps1` als Detection Script hochladen.
-3. `src/intune/Remediate-WUHealth.ps1` als Remediation Script hochladen.
-4. Als **SYSTEM**, in **64-Bit PowerShell**, zunächst ohne automatische Neustarts ausführen.
-5. Pilotgruppe verwenden und Ausgabe unter **Devices > Manage devices > Scripts and remediations** überwachen.
+1. Adjust `config/HealthConfig.json` and integrate the content into `src/common/WUHealth.Common.ps1` or the packaged deployment as needed.
+2. Upload `src/intune/Detect-WUHealth.ps1` as a detection script.
+3. Upload `src/intune/Remediate-WUHealth.ps1` as a remediation script.
+4. Run as **SYSTEM** in **64-bit PowerShell** first, without automatic restarts.
+5. Use a pilot group and monitor the output in **Devices > Manage devices > Scripts and remediations**.
 
 ### SCCM / MECM
 
-1. Configuration Item vom Typ Windows Desktop/Server erstellen.
-2. `src/sccm/Discovery-WUHealth.ps1` als Discovery Script, Datentyp `String`.
-3. Compliance Rule: Rückgabewert muss `Healthy` sein.
-4. `src/sccm/Remediate-WUHealth.ps1` als Remediation Script hinterlegen.
-5. Configuration Baseline erstellen, an Pilot-Collection verteilen und automatische Remediation zunächst nur im Wartungsfenster aktivieren.
+1. Create a Windows desktop/server configuration item.
+2. Use `src/sccm/Discovery-WUHealth.ps1` as the discovery script with data type `String`.
+3. Compliance rule: the return value must be `Healthy`.
+4. Store `src/sccm/Remediate-WUHealth.ps1` as the remediation script.
+5. Create a configuration baseline, assign it to a pilot collection, and activate automatic remediation only during the maintenance window initially.
 
-## Sicherheitsgrenzen
+## Safety Boundaries
 
-- Kein automatisches `chkdsk /f`, kein Firmware-Flash, kein Treiberaustausch, kein Inplace Upgrade.
-- Kein automatischer Neustart durch Intune Remediations.
-- Storage-Events, PnP-Fehler und wiederkehrende Korruption werden eskaliert.
-- Repair Source muss exakt zu Edition, Architektur, Sprache und Patchstand passen.
+- No automatic `chkdsk /f`, no firmware flashing, no driver replacement, no in-place upgrade.
+- No automatic restart caused by Intune remediations.
+- Storage events, PnP errors, and repeated corruption are escalated.
+- Repair Source must match the edition, architecture, language, and patch level exactly.
 
-## Ergebniszustände
+## Result States
 
-| Zustand | Bedeutung | Aktion |
+| State | Meaning | Action |
 |---|---|---|
-| `Healthy` | Keine relevanten Befunde | Überwachen |
-| `Repairable` | Component Store oder Systemdateien auffällig | DISM/SFC |
-| `RebootRequired` | Reparatur oder Servicing benötigt Neustart | Wartungsprozess |
-| `EscalateStorage` | Storage-/Dateisystemindikatoren | Hardware/OEM-Analyse |
-| `EscalateDriver` | PnP-/kritischer Treiberbefund | Treiber-/Firmware-Review |
-| `RepeatOffender` | Schwellenwert wiederholter Reparaturen erreicht | Root-Cause-Analyse/Rebuild-Entscheidung |
-| `Error` | Prüflogik nicht vollständig ausführbar | Script-/Clientanalyse |
+| `Healthy` | No relevant findings | Monitor |
+| `Repairable` | Component Store or system files are suspicious | DISM/SFC |
+| `RebootRequired` | Repair or servicing requires a restart | Maintenance process |
+| `EscalateStorage` | Storage/file-system indicators | Hardware/OEM analysis |
+| `EscalateDriver` | PnP/critical driver issue | Driver/firmware review |
+| `RepeatOffender` | Threshold of repeated repairs reached | Root-cause analysis / rebuild decision |
+| `Error` | Validation logic could not be executed completely | Script/client analysis |
 
-## Dokumentation
+## Documentation
 
-- [Konzept](docs/01-Konzept.md)
-- [Intune-Rollout](docs/02-Intune-Rollout.md)
-- [SCCM-Rollout](docs/03-SCCM-Rollout.md)
-- [Betriebsmodell](docs/04-Betriebsmodell.md)
+- [Concept](docs/01-Concept.md)
+- [Intune Rollout](docs/02-Intune-Rollout.md)
+- [SCCM Rollout](docs/03-SCCM-Rollout.md)
+- [Operating Model](docs/04-Operating-Model.md)
 - [Troubleshooting](docs/05-Troubleshooting.md)
-- [Security und Governance](docs/06-Security-Governance.md)
 - [Repair Source](docs/07-Repair-Source.md)
-- [Inplace Upgrade Eskalation](docs/08-Inplace-Upgrade.md)
-- [Anpassung](docs/09-Customization.md)
+- [In-place Upgrade Escalation](docs/08-Inplace-Upgrade.md)
+- [Customization](docs/09-Customization.md)
 
 ## Disclaimer
 
-Die Skripte sind eine anpassbare Referenz. DISM, SFC, Windows Update Reset, Treiber- und Storage-Diagnosen müssen im jeweiligen Kundennetz, mit Security-Produkten, Wartungsfenstern und Betriebsprozessen validiert werden.
+The scripts are a configurable reference implementation. DISM, SFC, Windows Update reset, driver and storage diagnostics must be validated in the target customer environment with security products, maintenance windows, and operational procedures.

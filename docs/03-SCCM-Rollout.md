@@ -1,4 +1,4 @@
-# SCCM-/MECM-Rollout
+# SCCM / MECM Rollout
 
 ## Configuration Item
 
@@ -7,16 +7,16 @@
 - Discovery: `src/sccm/Discovery-WUHealth.ps1`
 - Expected value: `Healthy`
 - Remediation: `src/sccm/Remediate-WUHealth.ps1`
-- 64-Bit PowerShell aktivieren
+- Enable 64-bit PowerShell
 
 ## Baseline
 
 - Name: `CB-Windows-Update-Health`
-- Deployment zuerst an Pilot-Collection
-- Automatic remediation nur für `Repairable`
-- Service Windows beachten
-- Compliance-Status für Collections nutzen, zum Beispiel `Repeat Offender`, `Storage Review`, `Driver Review`
+- Deploy first to a pilot collection
+- Automatic remediation only for `Repairable`
+- Consider the Windows servicing model
+- Use compliance status for collections, for example `Repeat Offender`, `Storage Review`, and `Driver Review`
 
-## Alternative für längere Reparaturen
+## Alternative for Longer Repairs
 
-DISM/SFC können lange laufen. Wenn die Configuration Baseline dafür betrieblich ungeeignet ist, Discovery nur zur Klassifizierung verwenden und die Reparatur als Package/Application/Task Sequence mit eigener Max Runtime und Wartungsfenster verteilen.
+DISM/SFC can take a long time to run. If the configuration baseline is operationally unsuitable for this, use discovery only for classification and deploy repair via a package, application, or task sequence with its own maximum runtime and maintenance window.

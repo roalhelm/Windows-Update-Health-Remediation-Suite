@@ -28,7 +28,7 @@
     "sha256": "038cfce7816ec99b82fdd8ed877e941544b638eedabb3f3241c71740455309ae"
   },
   {
-    "path": "docs/01-Konzept.md",
+    "path": "docs/01-Concept.md",
     "sha256": "b34c2159e1050957a1ecacff82618ad363af154bf57947a64b0fbc71f5a408d5"
   },
   {
@@ -40,16 +40,12 @@
     "sha256": "ebe21322d76d3abc2c43e4c19ca3f166872a40c4d3eaf4b4a708036a815158f3"
   },
   {
-    "path": "docs/04-Betriebsmodell.md",
+    "path": "docs/04-Operating-Model.md",
     "sha256": "db5db0512fa90d0c1af6ea98bf492f3908030572f9b9cd2b31e4c7ff1783e404"
   },
   {
     "path": "docs/05-Troubleshooting.md",
     "sha256": "4b416965cb5b16bcc99f208fea32f1c863b429378fa7f2e1fcceab74bcb0b5fc"
-  },
-  {
-    "path": "docs/06-Security-Governance.md",
-    "sha256": "439888af47d76248a2234a71f0ca4dec70acc8638aca988b232910c7b60ff933"
   },
   {
     "path": "docs/07-Repair-Source.md",

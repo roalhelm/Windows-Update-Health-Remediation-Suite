@@ -27,6 +27,6 @@
   "ResetWindowsUpdateComponents": false,
   "MaxDISMMinutes": 120,
   "MaxSFCMinutes": 90,
-  "LogRoot": "C:\\ProgramData\\WUHealthSuite\\Logs",
+  "LogRoot": "C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs",
   "StatePath": "C:\\ProgramData\\WUHealthSuite\\State.json"
 }
