@@ -1,0 +1,9 @@
+logs/
+*.log
+*.etl
+*.cab
+*.zip
+reports/
+.DS_Store
+.vscode/
+.idea/

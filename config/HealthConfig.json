@@ -1,0 +1,32 @@
+{
+  "SchemaVersion": "1.0",
+  "CompanyName": "CUSTOMER",
+  "LookbackDays": 30,
+  "MinimumFreeSpaceGB": 20,
+  "StorageEventIds": [
+    7,
+    11,
+    51,
+    55,
+    98,
+    129,
+    153,
+    157
+  ],
+  "StorageEventWarningCount": 1,
+  "StorageEventCriticalCount": 5,
+  "PnPErrorCritical": true,
+  "DriverAgeWarningDays": 1095,
+  "RepairHistoryDays": 90,
+  "RepeatOffenderThreshold": 2,
+  "AllowWindowsUpdateRepairSource": true,
+  "RepairSource": "",
+  "RepairSourceType": "WindowsUpdate",
+  "RunSFC": true,
+  "RunComponentCleanup": false,
+  "ResetWindowsUpdateComponents": false,
+  "MaxDISMMinutes": 120,
+  "MaxSFCMinutes": 90,
+  "LogRoot": "C:\\ProgramData\\WUHealthSuite\\Logs",
+  "StatePath": "C:\\ProgramData\\WUHealthSuite\\State.json"
+}

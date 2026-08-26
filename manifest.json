@@ -1,0 +1,118 @@
+[
+  {
+    "path": ".gitignore",
+    "sha256": "cbf8e8f1cbb0854a83a7f0ee60ab8c1124443c70c84b6c9ee900466b53a2f54c"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "sha256": "21545ff601deb9ca798d2a1b1db01a1b8e407c78d644a68ccb5b7557fc20ba91"
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "sha256": "7662ce864b724c88e858003df6d705691634c91ec2f8c499984a3b75b7b84e3c"
+  },
+  {
+    "path": "LICENSE",
+    "sha256": "1432ad87f983d5adedc82fd459b59a7b87a7a544ee1f205dbebb0f92eded313e"
+  },
+  {
+    "path": "README.md",
+    "sha256": "725756e0990fb4c3962ee4c858d57f2bd617c57a29ed86b9843a0b3ba4d0a8b8"
+  },
+  {
+    "path": "SECURITY.md",
+    "sha256": "d964b433ef6389607822c8da3d34a8c095d8ce1e6a009895c681c1df9443b086"
+  },
+  {
+    "path": "config/HealthConfig.json",
+    "sha256": "038cfce7816ec99b82fdd8ed877e941544b638eedabb3f3241c71740455309ae"
+  },
+  {
+    "path": "docs/01-Konzept.md",
+    "sha256": "b34c2159e1050957a1ecacff82618ad363af154bf57947a64b0fbc71f5a408d5"
+  },
+  {
+    "path": "docs/02-Intune-Rollout.md",
+    "sha256": "69c69c3870555a0c32f9a303559f9584a862070e289fc1449031ec5f1c6d586f"
+  },
+  {
+    "path": "docs/03-SCCM-Rollout.md",
+    "sha256": "ebe21322d76d3abc2c43e4c19ca3f166872a40c4d3eaf4b4a708036a815158f3"
+  },
+  {
+    "path": "docs/04-Betriebsmodell.md",
+    "sha256": "db5db0512fa90d0c1af6ea98bf492f3908030572f9b9cd2b31e4c7ff1783e404"
+  },
+  {
+    "path": "docs/05-Troubleshooting.md",
+    "sha256": "4b416965cb5b16bcc99f208fea32f1c863b429378fa7f2e1fcceab74bcb0b5fc"
+  },
+  {
+    "path": "docs/06-Security-Governance.md",
+    "sha256": "439888af47d76248a2234a71f0ca4dec70acc8638aca988b232910c7b60ff933"
+  },
+  {
+    "path": "docs/07-Repair-Source.md",
+    "sha256": "8bdf46aa8aec07896eeb79d6a50dc341bc6a7a663ea212d277d311536aa8a50b"
+  },
+  {
+    "path": "docs/08-Inplace-Upgrade.md",
+    "sha256": "aa30fef255a09450c4903bd01d82e1b0bcd5bdc1c3d7971a452ffc9828e3036b"
+  },
+  {
+    "path": "docs/09-Customization.md",
+    "sha256": "225771a2a244fdc0f77666b8082fa4a6fe86a1d136adaf017f800a723ec01910"
+  },
+  {
+    "path": "docs/images/architecture-1.png",
+    "sha256": "32109c973c6253888cc4b965afd36a1d5a21649ce5e3b42831e336e0a1e1c314"
+  },
+  {
+    "path": "docs/images/architecture-2.png",
+    "sha256": "8fe5c98c8c7f8b7e4cbbef6a4a69f10040cf50d63294a568bba6eb94ec376344"
+  },
+  {
+    "path": "samples/Intune-Remediation-Settings.md",
+    "sha256": "d876548952642cb1d379756791c401dc35fd753e14b61afc9a51ff946d03c599"
+  },
+  {
+    "path": "samples/SCCM-Configuration-Item-Settings.md",
+    "sha256": "6477054fc0da243434ab13224a1a036a689f8b754a0ed860a1dc43be0c8f9476"
+  },
+  {
+    "path": "src/common/WUHealth.Common.ps1",
+    "sha256": "c4123b43ee6e795eb1c66a4f06b216a02cb06a45dd21ebe2318c3bbd895a1530"
+  },
+  {
+    "path": "src/intune/Detect-WUHealth.ps1",
+    "sha256": "67e9e0dfccdbe87bd9b5f8a65863af2bc764157347f5195439e631ef4c8f09be"
+  },
+  {
+    "path": "src/intune/Remediate-WUHealth.ps1",
+    "sha256": "e5dbff32926d6359074f6cbbdb2b1e19832a2b551c876bbe1751e10240bc5e62"
+  },
+  {
+    "path": "src/sccm/Discovery-WUHealth.ps1",
+    "sha256": "c0ceefbea6c7a7e60bdf473941759ab585000b6806dca76059add2001b0dc0f9"
+  },
+  {
+    "path": "src/sccm/Remediate-WUHealth.ps1",
+    "sha256": "a1dc81fc1c4b892fbe3754ce086f48d026a59a4df3031087456605b53c3cbfb2"
+  },
+  {
+    "path": "src/tools/Invoke-WUHealthDiagnostic.ps1",
+    "sha256": "41ff552906543ee49d472467466d1a53c69fe009fe4710ebf2dee5d1abf894d3"
+  },
+  {
+    "path": "src/tools/New-WUHealthSupportBundle.ps1",
+    "sha256": "dc0254bd284771b04f13054c962bebda1481ccacec77230b2210611074bb6cb0"
+  },
+  {
+    "path": "src/tools/Test-WUHealthPrerequisites.ps1",
+    "sha256": "e156792a071533e3720c0095535dc349505d27213bd155ec88448f7789d19bcb"
+  },
+  {
+    "path": "tests/WUHealth.Smoke.Tests.ps1",
+    "sha256": "8cb5e3849654fac8d263a39d65d563accd1b9d12954ff42f4c6b6688d6fed6c2"
+  }
+]
