@@ -7,7 +7,7 @@ function Get-WUHDefaultConfig {
         StorageEventIds = @(7,11,51,55,98,129,153,157)
         StorageEventWarningCount = 1; StorageEventCriticalCount = 5
         DriverAgeWarningDays = 1095; RepeatOffenderThreshold = 2
-        RepairHistoryDays = 90; RepairSource = ''; RepairSourceType = 'WindowsUpdate'
+        RepairHistoryDays = 90; RepairSource = ''; RepairSourceType = 'WindowsUpdate'; UseLocalRepairSource = $false
         RunSFC = $true; RunComponentCleanup = $false; ResetWindowsUpdateComponents = $false
         LogRoot = 'C:\ProgramData\WUHealthSuite\Logs'
         StatePath = 'C:\ProgramData\WUHealthSuite\State.json'
@@ -84,6 +84,14 @@ function Get-WUHHealth([hashtable]$Config) {
     elseif($signals.PendingReboot){$status='RebootRequired'}
     [pscustomobject]@{SchemaVersion='1.0';Timestamp=(Get-Date).ToString('o');ComputerName=$env:COMPUTERNAME;Status=$status;Manufacturer=$cs.Manufacturer;Model=$cs.Model;OSVersion=$os.Version;Build=$os.BuildNumber;BIOS=$bios.SMBIOSBIOSVersion;Warnings=$warnings;Errors=$errors;Signals=$signals}
 }
+function Get-WUHRepairCommandArgs([hashtable]$Config) {
+    $args = '/Online /Cleanup-Image /RestoreHealth'
+    if ($Config.UseLocalRepairSource -or (-not [string]::IsNullOrWhiteSpace($Config.RepairSource))) {
+        Write-WUHLog $Config 'Local DISM repair source ignored; using Windows Update / online repair only.' 'WARN'
+        return $args
+    }
+    return $args
+}
 function Invoke-WUHRepair([hashtable]$Config) {
     Initialize-WUHPath $Config; Write-WUHLog $Config 'Repair start'
     $pre=Get-WUHHealth $Config
@@ -94,8 +102,7 @@ function Invoke-WUHRepair([hashtable]$Config) {
         Rename-Item "$env:windir\System32\catroot2" "catroot2.wuh-old-$(Get-Date -Format yyyyMMddHHmmss)" -ErrorAction SilentlyContinue
         foreach($svc in 'cryptsvc','wuauserv','bits'){Start-Service $svc -ErrorAction SilentlyContinue}
     }
-    $args='/Online /Cleanup-Image /RestoreHealth'
-    if($Config.RepairSource){$args += " /Source:$($Config.RepairSource) /LimitAccess"}
+    $args = Get-WUHRepairCommandArgs $Config
     $dism=Invoke-WUHProcess dism.exe $args 120
     $sfc=$null; if($Config.RunSFC){$sfc=Invoke-WUHProcess sfc.exe '/scannow' 90}
     if($Config.RunComponentCleanup){Invoke-WUHProcess dism.exe '/Online /Cleanup-Image /StartComponentCleanup' 120 | Out-Null}

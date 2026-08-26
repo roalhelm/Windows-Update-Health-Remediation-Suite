@@ -2,14 +2,15 @@
 
 ## Thresholds
 
-`config/HealthConfig.json` contains central examples. Adjust them before production use:
+The Intune and remediation scripts use embedded defaults and do not require `config/HealthConfig.json` or any local repair source.
+
+If you need to customize behavior, adjust the defaults in the script itself:
 
 - LookbackDays
 - MinimumFreeSpaceGB
 - storage event IDs and thresholds
 - DriverAgeWarningDays
 - RepeatOffenderThreshold
-- Repair Source
 - SFC/Component Cleanup/WU Reset
 
 ## Multi-Customer Operations

@@ -37,7 +37,7 @@ flowchart LR
 
 ### Intune
 
-1. Adjust `config/HealthConfig.json` and integrate the content into `src/common/WUHealth.Common.ps1` or the packaged deployment as needed.
+1. No separate `config/HealthConfig.json` is required; the Intune scripts ship with embedded defaults and no local repair-source requirement.
 2. Upload `src/intune/Detect-WUHealth.ps1` as a detection script.
 3. Upload `src/intune/Remediate-WUHealth.ps1` as a remediation script.
 4. Run as **SYSTEM** in **64-bit PowerShell** first, without automatic restarts.
@@ -56,7 +56,7 @@ flowchart LR
 - No automatic `chkdsk /f`, no firmware flashing, no driver replacement, no in-place upgrade.
 - No automatic restart caused by Intune remediations.
 - Storage events, PnP errors, and repeated corruption are escalated.
-- Repair Source must match the edition, architecture, language, and patch level exactly.
+- Repairs use the online Windows Update path only; no local DISM source or mounted ISO/media is required.
 
 ## Result States
 
