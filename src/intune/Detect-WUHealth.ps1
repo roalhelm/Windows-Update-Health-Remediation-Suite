@@ -10,6 +10,7 @@ function Get-WUHDefaultConfig {
         DriverAgeWarningDays = 1095; RepeatOffenderThreshold = 2
         RepairHistoryDays = 90; RepairSource = ''; RepairSourceType = 'WindowsUpdate'; UseLocalRepairSource = $false
         RunSFC = $true; RunComponentCleanup = $false; ResetWindowsUpdateComponents = $false
+        MinimumSupportedBuild = 26100; PatchStaleDays = 30
         LogRoot = 'C:\ProgramData\Microsoft\IntuneManagementExtension\Logs'
         StatePath = 'C:\ProgramData\WUHealthSuite\State.json'
     }
@@ -48,6 +49,90 @@ function Get-WUHStorageEvents([hashtable]$Config) {
     $start=(Get-Date).AddDays(-[int]$Config.LookbackDays)
     try { @(Get-WinEvent -FilterHashtable @{LogName='System';StartTime=$start;Id=$Config.StorageEventIds} -ErrorAction Stop | Select-Object TimeCreated,Id,ProviderName,LevelDisplayName,Message) } catch { @() }
 }
+function Get-WUHUpdateStatus {
+    param(
+        [hashtable]$Config = @{}
+    )
+    $state=[ordered]@{
+        Status='Unknown';
+        HasProblems=$false;
+        PatchLevelBehind=$false;
+        CurrentVersion=$null;
+        CurrentBuild=$null;
+        UBR=$null;
+        LastScanTime=$null;
+        LastInstallationTime=$null;
+        PendingUpdates=0;
+        FailedUpdates=@();
+        ServiceStatus=$null;
+        AutomaticUpdateEnabled=$null;
+        LastError=$null;
+        AgentVersion=$null
+    }
+    try {
+        $os=Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+        $state.CurrentVersion=$os.Version
+        $state.CurrentBuild=$os.BuildNumber
+        $nt=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction SilentlyContinue
+        if($nt){ $state.UBR=$nt.UBR }
+    } catch {}
+    try {
+        $hotfix = Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1
+        if($hotfix -and $hotfix.InstalledOn){ $state.LastInstallationTime = [datetime]$hotfix.InstalledOn }
+    } catch {}
+    try { $svc=Get-Service -Name wuauserv -ErrorAction Stop; $state.ServiceStatus=$svc.Status.ToString() } catch {}
+    try { $au=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update' -ErrorAction Stop; if($null -ne $au.AutomaticUpdateEnabled){ $state.AutomaticUpdateEnabled=$au.AutomaticUpdateEnabled }; if($null -ne $au.LastError){ $state.LastError=$au.LastError } } catch {}
+    try {
+        $session=New-Object -ComObject Microsoft.Update.Session
+        $searcher=$session.CreateUpdateSearcher()
+        $state.AgentVersion=$searcher.Version
+        $pending=$searcher.Search('IsInstalled=0 and IsHidden=0')
+        $state.PendingUpdates=@($pending.Updates).Count
+        $state.LastScanTime=(Get-Date).ToString('o')
+    } catch {
+        $state.HasProblems=$true
+        $state.Status='QueryFailed'
+    }
+    try {
+        $history=@($searcher.QueryHistory(0,30))
+        $failed=@($history | Where-Object {
+            $_ -and $_.ResultCode -ne 2 -and $_.ResultCode -ne 3 -and $_.ResultCode -ne 0
+        })
+        if($failed.Count -gt 0){
+            $state.FailedUpdates=@($failed | Select-Object -Property Date,Title,ResultCode)
+            $state.HasProblems=$true
+            $state.Status='UpdateIssues'
+        }
+    } catch {}
+    if($state.ServiceStatus -and $state.ServiceStatus -ne 'Running'){
+        $state.HasProblems=$true
+        $state.Status='UpdateServiceIssue'
+    }
+    if($null -ne $state.LastError -and [int]$state.LastError -ne 0){
+        $state.HasProblems=$true
+        $state.Status='UpdateError'
+    }
+    if($state.CurrentBuild -and $Config.MinimumSupportedBuild -and [int]$state.CurrentBuild -lt [int]$Config.MinimumSupportedBuild){
+        $state.PatchLevelBehind=$true
+        $state.Status='PatchLevelBehind'
+    }
+    if($state.LastInstallationTime){
+        $ageDays = ((Get-Date) - [datetime]$state.LastInstallationTime).TotalDays
+        if($Config.PatchStaleDays -and $ageDays -gt [double]$Config.PatchStaleDays){
+            $state.PatchLevelBehind=$true
+            if($state.Status -notin @('UpdateIssues','UpdateServiceIssue','UpdateError','QueryFailed')){ $state.Status='PatchLevelBehind' }
+        }
+    }
+    if($state.PendingUpdates -gt 0){
+        $state.PatchLevelBehind=$true
+        if($state.Status -notin @('UpdateIssues','UpdateServiceIssue','UpdateError','QueryFailed')){ $state.Status='PendingUpdates' }
+    }
+    if(-not $state.HasProblems -and -not $state.PatchLevelBehind){
+        if($state.PendingUpdates -gt 0){ $state.Status='PendingUpdates' }
+        elseif($state.ServiceStatus -eq 'Running'){ $state.Status='Healthy' }
+    }
+    [pscustomobject]$state
+}
 function Get-WUHHealth([hashtable]$Config) {
     Initialize-WUHPath $Config
     $errors=@(); $warnings=@(); $signals=[ordered]@{}
@@ -63,6 +148,7 @@ function Get-WUHHealth([hashtable]$Config) {
     try {$pnp=@(Get-CimInstance Win32_PnPEntity -ErrorAction Stop | Where-Object {$_.ConfigManagerErrorCode -ne 0} | Select Name,PNPClass,ConfigManagerErrorCode,Manufacturer)}catch{$pnp=@()}
     $signals.PnPErrors=$pnp
     $driverBad=@($pnp|Where-Object {$_.PNPClass -match 'SCSIAdapter|HDC|DiskDrive|System'}).Count -gt 0
+    $signals.WindowsUpdate=Get-WUHUpdateStatus $Config
     $dism=Invoke-WUHProcess dism.exe '/Online /Cleanup-Image /CheckHealth' 20
     $signals.DISMExitCode=$dism.ExitCode
     $signals.DISMRepairable=($dism.StdOut -match 'repairable|reparierbar|component store corruption detected|Komponentenspeicher.*beschädigt')
@@ -79,6 +165,8 @@ function Get-WUHHealth([hashtable]$Config) {
     if($errors.Count){$status='Error'}
     elseif($storageBad){$status='EscalateStorage'}
     elseif($driverBad){$status='EscalateDriver'}
+    elseif($signals.WindowsUpdate.PatchLevelBehind){$status='PatchLevelBehind'}
+    elseif($signals.WindowsUpdate.HasProblems){$status='UpdateIssue'}
     elseif($recent.Count -ge [int]$Config.RepeatOffenderThreshold){$status='RepeatOffender'}
     elseif($signals.DISMUnrepairable){$status='RepeatOffender'}
     elseif($signals.DISMRepairable -or $signals.SFCViolation){$status='Repairable'}
@@ -116,7 +204,22 @@ function Invoke-WUHRepair([hashtable]$Config) {
 $config=Get-WUHDefaultConfig
 try {
   $result=Get-WUHHealth $config
-  $compact=[ordered]@{Status=$result.Status;FreeGB=$result.Signals.FreeSpaceGB;DiskEvents=$result.Signals.StorageEventCount;PnPErrors=@($result.Signals.PnPErrors).Count;RepairCount=$result.Signals.RepairCount;Build=$result.Build;Model=$result.Model} | ConvertTo-Json -Compress
+  $compact=[ordered]@{
+    Status=$result.Status;
+    FreeGB=$result.Signals.FreeSpaceGB;
+    DiskEvents=$result.Signals.StorageEventCount;
+    PnPErrors=@($result.Signals.PnPErrors).Count;
+    RepairCount=$result.Signals.RepairCount;
+    UpdateStatus=$result.Signals.WindowsUpdate.Status;
+    PatchLevelBehind=$result.Signals.WindowsUpdate.PatchLevelBehind;
+    CurrentBuild=$result.Signals.WindowsUpdate.CurrentBuild;
+    CurrentVersion=$result.Signals.WindowsUpdate.CurrentVersion;
+    UBR=$result.Signals.WindowsUpdate.UBR;
+    PendingUpdates=$result.Signals.WindowsUpdate.PendingUpdates;
+    LastScanTime=$result.Signals.WindowsUpdate.LastScanTime;
+    LastInstallationTime=$result.Signals.WindowsUpdate.LastInstallationTime;
+    Model=$result.Model
+  } | ConvertTo-Json -Compress
   Write-Output $compact
-  if($result.Status -eq 'Repairable'){exit 1}else{exit 0}
+  if($result.Status -in @('Repairable','UpdateIssue','PatchLevelBehind')){exit 1}else{exit 0}
 } catch { Write-Output ("Error: "+$_.Exception.Message); exit 1 }
