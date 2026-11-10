@@ -224,6 +224,9 @@ function Get-WUHHealth([hashtable]$Config) {
     if($Config.CheckWindowsUpdate){
         $signals.WindowsUpdate=Get-WUHUpdateStatus $Config
         $updateProblems=[bool]$signals.WindowsUpdate.HasProblems; $patchBehind=[bool]$signals.WindowsUpdate.PatchLevelBehind
+    } else {
+        # Same shape as Get-WUHUpdateStatus so callers can read the properties under StrictMode.
+        $signals.WindowsUpdate=[pscustomobject]@{Status='NotChecked';HasProblems=$false;PatchLevelBehind=$false;CurrentVersion=$null;CurrentBuild=$null;UBR=$null;LastScanTime=$null;LastInstallationTime=$null;PendingUpdates=0;FailedUpdates=@();ServiceStatus=$null;ServiceStartType=$null;AgentVersion=$null}
     }
     $store=Get-WUHComponentStoreState
     $signals.ComponentStoreState=$store.State
@@ -268,7 +271,11 @@ function Invoke-WUHUpdateRemediation([hashtable]$Config,[string]$PreStatus) {
     if($Config.TriggerUpdateScan){
         $uso=Join-Path $env:windir 'System32\UsoClient.exe'
         if(Test-Path $uso){
-            try { Invoke-WUHProcess $uso 'StartScan' 5 | Out-Null; $scan=$true; $actions += 'ScanTriggered' }
+            try {
+                $usoResult=Invoke-WUHProcess $uso 'StartScan' 5
+                if($usoResult.ExitCode -eq 0){ $scan=$true; $actions += 'ScanTriggered' }
+                else { Write-WUHLog $Config "UsoClient StartScan returned exit code $($usoResult.ExitCode)" 'WARN' }
+            }
             catch { Write-WUHLog $Config "UsoClient StartScan failed: $($_.Exception.Message)" 'WARN' }
         } else { Write-WUHLog $Config 'UsoClient.exe not found; scan not triggered' 'WARN' }
     }

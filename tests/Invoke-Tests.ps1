@@ -10,7 +10,9 @@ $testFiles = @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.Tests.ps1' | 
 if (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 }) {
     Import-Module Pester -MinimumVersion 5.0
     $result = Invoke-Pester -Path $PSScriptRoot -PassThru
-    exit $result.FailedCount
+    # Result also covers discovery and container failures, which FailedCount does not.
+    if ($result.Result -ne 'Passed') { exit 1 }
+    exit 0
 }
 
 Write-Host 'Pester 5 not found, using the built-in runner.'

@@ -97,23 +97,23 @@
   },
   {
     "path": "src/common/WUHealth.Common.ps1",
-    "sha256": "4778ba2c7ed0f1488102adf01267c963727a1633a82086095630e9a1359e0adb"
+    "sha256": "486215ff6b7c3ed98c4fceb6c9675d68374b12acb1dad226f3c794faf683a5b0"
   },
   {
     "path": "src/intune/Detect-WUHealth.ps1",
-    "sha256": "e2849be254b8bbf848f76710a06993bb758966fa8b7774d33197b9e74d9ad52f"
+    "sha256": "090aeeabae27d0676eb20f9faec1294cc55995ab196a294f4b09a251b4ba5269"
   },
   {
     "path": "src/intune/Remediate-WUHealth.ps1",
-    "sha256": "1e18216fb4348ca21026f14c96adb3281253d59f628786292fa0936b5825fdf5"
+    "sha256": "41c3660e0653d81ae778ce48a9cbcd37ab3771ef6d46022ed8fb847b7804c34f"
   },
   {
     "path": "src/sccm/Discovery-WUHealth.ps1",
-    "sha256": "37f0218c68824f66cb2183045f88a3614b9370a908c3ff2e36ed897d3b2da90e"
+    "sha256": "b6d813a344642d453c736c4527f2229fa58af56df5c2ae4419996fc62d12930a"
   },
   {
     "path": "src/sccm/Remediate-WUHealth.ps1",
-    "sha256": "d6321f2531a0858d5b7c6491df7aa25b7f0f35e7adae904dd7c3b8b8b679de80"
+    "sha256": "c77fd2642e52cd87a6bbb8451c15c65d70ade6895c974a409ee4249d2ce85d5b"
   },
   {
     "path": "src/tools/Invoke-WUHealthDiagnostic.ps1",
@@ -129,7 +129,7 @@
   },
   {
     "path": "tests/Invoke-Tests.ps1",
-    "sha256": "6326e7377dd50059054dff91f70201143e493eee2a31866bcdce24248150cc89"
+    "sha256": "cd11c4d70eccee47f71307122efdbb504f37bb2e8bd97ba1fbf2f13977702390"
   },
   {
     "path": "tests/WUHealth.Logic.Tests.ps1",
