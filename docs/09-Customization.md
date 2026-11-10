@@ -4,7 +4,7 @@
 
 The Intune and remediation scripts use embedded defaults and do not require `config/HealthConfig.json` or any local repair source.
 
-If you need to customize behavior, adjust the defaults in the script itself:
+If you need to customize behavior, adjust the defaults in `Get-WUHDefaultConfig` in `src/common/WUHealth.Common.ps1` and run `build/Build-Scripts.ps1`. The Intune and SCCM scripts are generated; do not edit them by hand.
 
 - LookbackDays
 - MinimumFreeSpaceGB
@@ -12,6 +12,7 @@ If you need to customize behavior, adjust the defaults in the script itself:
 - DriverAgeWarningDays
 - RepeatOffenderThreshold
 - SFC/Component Cleanup/WU Reset
+- CheckWindowsUpdate, TriggerUpdateScan, MinimumSupportedBuild, PatchStaleDays
 
 ## Multi-Customer Operations
 

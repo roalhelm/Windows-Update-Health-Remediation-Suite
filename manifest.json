@@ -4,60 +4,52 @@
     "sha256": "cbf8e8f1cbb0854a83a7f0ee60ab8c1124443c70c84b6c9ee900466b53a2f54c"
   },
   {
+    "path": "build/Build-Scripts.ps1",
+    "sha256": "7f29cb9f49d53cb45c31f64e7d5a6e2ba412bb7b5d1475665943a85d6c70f532"
+  },
+  {
     "path": "CHANGELOG.md",
-    "sha256": "21545ff601deb9ca798d2a1b1db01a1b8e407c78d644a68ccb5b7557fc20ba91"
-  },
-  {
-    "path": "CONTRIBUTING.md",
-    "sha256": "7662ce864b724c88e858003df6d705691634c91ec2f8c499984a3b75b7b84e3c"
-  },
-  {
-    "path": "LICENSE",
-    "sha256": "1432ad87f983d5adedc82fd459b59a7b87a7a544ee1f205dbebb0f92eded313e"
-  },
-  {
-    "path": "README.md",
-    "sha256": "725756e0990fb4c3962ee4c858d57f2bd617c57a29ed86b9843a0b3ba4d0a8b8"
-  },
-  {
-    "path": "SECURITY.md",
-    "sha256": "d964b433ef6389607822c8da3d34a8c095d8ce1e6a009895c681c1df9443b086"
+    "sha256": "50a0a0520dd4b217262af00ec578e42cf938b2a9f665c71ea49bb8321aa77366"
   },
   {
     "path": "config/HealthConfig.json",
-    "sha256": "038cfce7816ec99b82fdd8ed877e941544b638eedabb3f3241c71740455309ae"
+    "sha256": "c6e55cce012488fa706f839108e322c5c36b5a428348d8b6507c2a1cb77c017a"
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "sha256": "4d203317d389c3c07ee75e4c9e6ee8fd0e1d8a5c44e70dd475336d8556834e46"
   },
   {
     "path": "docs/01-Concept.md",
-    "sha256": "b34c2159e1050957a1ecacff82618ad363af154bf57947a64b0fbc71f5a408d5"
+    "sha256": "84e10ff4870672b0b25944b7b5ff29fedfd297fd247ccd6b2badd2d59f7decc2"
   },
   {
     "path": "docs/02-Intune-Rollout.md",
-    "sha256": "69c69c3870555a0c32f9a303559f9584a862070e289fc1449031ec5f1c6d586f"
+    "sha256": "d47bec1316e56855df0028cc95da17af9e63f06636c24cabad8efc80fd8fe700"
   },
   {
     "path": "docs/03-SCCM-Rollout.md",
-    "sha256": "ebe21322d76d3abc2c43e4c19ca3f166872a40c4d3eaf4b4a708036a815158f3"
+    "sha256": "867634a0de473636f0d53e471f30f7ac67088f347608bc49c899630a5bea4f99"
   },
   {
     "path": "docs/04-Operating-Model.md",
-    "sha256": "db5db0512fa90d0c1af6ea98bf492f3908030572f9b9cd2b31e4c7ff1783e404"
+    "sha256": "6c4b56dedf1251451f19d729aab965b7601021126b97b7853f3b0c129c0f26f3"
   },
   {
     "path": "docs/05-Troubleshooting.md",
-    "sha256": "4b416965cb5b16bcc99f208fea32f1c863b429378fa7f2e1fcceab74bcb0b5fc"
+    "sha256": "d927bf10134145fa7e36050e5beae616d226cdfb864f05b7003f7e625870f697"
   },
   {
     "path": "docs/07-Repair-Source.md",
-    "sha256": "8bdf46aa8aec07896eeb79d6a50dc341bc6a7a663ea212d277d311536aa8a50b"
+    "sha256": "5c5eb617a470f8f42a5bee8dd45f6f6118d862284f7b15e6f75dcc4e585d574e"
   },
   {
     "path": "docs/08-Inplace-Upgrade.md",
-    "sha256": "aa30fef255a09450c4903bd01d82e1b0bcd5bdc1c3d7971a452ffc9828e3036b"
+    "sha256": "e92474ce91f2c7cdecb2843ae52ac34ac2755481e59e2cfd83e5bf51a00eabd2"
   },
   {
     "path": "docs/09-Customization.md",
-    "sha256": "225771a2a244fdc0f77666b8082fa4a6fe86a1d136adaf017f800a723ec01910"
+    "sha256": "33f0201f83177065c07040f128c247c4032256cebf3d767fedd3949aad89b120"
   },
   {
     "path": "docs/images/architecture-1.png",
@@ -68,32 +60,60 @@
     "sha256": "8fe5c98c8c7f8b7e4cbbef6a4a69f10040cf50d63294a568bba6eb94ec376344"
   },
   {
+    "path": "LICENSE",
+    "sha256": "1432ad87f983d5adedc82fd459b59a7b87a7a544ee1f205dbebb0f92eded313e"
+  },
+  {
+    "path": "README.md",
+    "sha256": "0b33b2d527f68303d0b0fee84f6fca8ad8b1da1fad09d04b79a34c90fb4e17b3"
+  },
+  {
     "path": "samples/Intune-Remediation-Settings.md",
     "sha256": "d876548952642cb1d379756791c401dc35fd753e14b61afc9a51ff946d03c599"
+  },
+  {
+    "path": "samples/PSADT-Windows-Image-Repair/Deploy-Application.ps1",
+    "sha256": "ca3d26eda47ea7ea487eba6174fad650d404c814763dbd2f814ac43bb83d903f"
+  },
+  {
+    "path": "samples/PSADT-Windows-Image-Repair/Deployment-Template.md",
+    "sha256": "32c5c4627c4edd37b672fc05ab8cba9607e13b5f461a8b07890b94679e18c3b5"
+  },
+  {
+    "path": "samples/PSADT-Windows-Image-Repair/Files/Invoke-WUHLocalImageRepair.ps1",
+    "sha256": "7cbca3fa539928d5881cc6d7dcd7b19c333d36308bcf25a047809b5bbd23e281"
+  },
+  {
+    "path": "samples/PSADT-Windows-Image-Repair/README.md",
+    "sha256": "c0926336e9813c2f0d7c68a3c71812c902f2ff1d404b7532096effced7f50d82"
   },
   {
     "path": "samples/SCCM-Configuration-Item-Settings.md",
     "sha256": "6477054fc0da243434ab13224a1a036a689f8b754a0ed860a1dc43be0c8f9476"
   },
   {
+    "path": "SECURITY.md",
+    "sha256": "29b78a3e321ad55a88efd1d9b17fb46c32f5a04015e264dfaba3f1c1a082a8e6"
+  },
+  {
     "path": "src/common/WUHealth.Common.ps1",
-    "sha256": "c4123b43ee6e795eb1c66a4f06b216a02cb06a45dd21ebe2318c3bbd895a1530"
+    "sha256": "486215ff6b7c3ed98c4fceb6c9675d68374b12acb1dad226f3c794faf683a5b0"
   },
   {
     "path": "src/intune/Detect-WUHealth.ps1",
-    "sha256": "67e9e0dfccdbe87bd9b5f8a65863af2bc764157347f5195439e631ef4c8f09be"
+    "sha256": "090aeeabae27d0676eb20f9faec1294cc55995ab196a294f4b09a251b4ba5269"
   },
   {
     "path": "src/intune/Remediate-WUHealth.ps1",
-    "sha256": "e5dbff32926d6359074f6cbbdb2b1e19832a2b551c876bbe1751e10240bc5e62"
+    "sha256": "41c3660e0653d81ae778ce48a9cbcd37ab3771ef6d46022ed8fb847b7804c34f"
   },
   {
     "path": "src/sccm/Discovery-WUHealth.ps1",
-    "sha256": "c0ceefbea6c7a7e60bdf473941759ab585000b6806dca76059add2001b0dc0f9"
+    "sha256": "b6d813a344642d453c736c4527f2229fa58af56df5c2ae4419996fc62d12930a"
   },
   {
     "path": "src/sccm/Remediate-WUHealth.ps1",
-    "sha256": "a1dc81fc1c4b892fbe3754ce086f48d026a59a4df3031087456605b53c3cbfb2"
+    "sha256": "c77fd2642e52cd87a6bbb8451c15c65d70ade6895c974a409ee4249d2ce85d5b"
   },
   {
     "path": "src/tools/Invoke-WUHealthDiagnostic.ps1",
@@ -108,7 +128,15 @@
     "sha256": "e156792a071533e3720c0095535dc349505d27213bd155ec88448f7789d19bcb"
   },
   {
+    "path": "tests/Invoke-Tests.ps1",
+    "sha256": "cd11c4d70eccee47f71307122efdbb504f37bb2e8bd97ba1fbf2f13977702390"
+  },
+  {
+    "path": "tests/WUHealth.Logic.Tests.ps1",
+    "sha256": "f091c319085ba70f288f742c2bfa2ef78a08b10187ac9992af6b98b199322290"
+  },
+  {
     "path": "tests/WUHealth.Smoke.Tests.ps1",
-    "sha256": "8cb5e3849654fac8d263a39d65d563accd1b9d12954ff42f4c6b6688d6fed6c2"
+    "sha256": "4c943b7ab63d3ec5c0226de1a9e86495aa7d6c8e3714874da047eef73364df66"
   }
 ]

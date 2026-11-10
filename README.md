@@ -28,12 +28,13 @@ flowchart LR
 ## Directory Structure
 
 - `src/common`: shared health, logging, and repair engine
-- `src/intune`: standalone detection and remediation for Intune (with common engine embedded)
-- `src/sccm`: standalone discovery and remediation for configuration baselines (with common engine embedded)
+- `src/intune`: standalone detection and remediation for Intune (generated, common engine embedded)
+- `src/sccm`: standalone discovery and remediation for configuration baselines (generated, common engine embedded)
+- `build`: `Build-Scripts.ps1` generates the Intune and SCCM scripts from `src/common` and refreshes `manifest.json`
 - `src/tools`: local diagnostics and installation helpers
 - `config`: configurable thresholds
 - `docs`: architecture, rollout, operations, troubleshooting, and support guidance
-- `tests`: Pester smoke tests
+- `tests`: Pester tests (`tests/Invoke-Tests.ps1` runs them, with or without Pester installed)
 
 ## Quick Start
 
@@ -65,10 +66,10 @@ flowchart LR
 | State | Meaning | Action |
 |---|---|---|
 | `Healthy` | No relevant findings | Monitor |
-| `Repairable` | Component Store or system files are suspicious | DISM/SFC |
+| `Repairable` | Component store is repairable or SFC found integrity violations | DISM/SFC (postponed while component servicing waits for a restart) |
 | `RebootRequired` | Repair or servicing requires a restart | Maintenance process |
-| `PatchLevelBehind` | Build or patch age is below the supported baseline or updates are stale | Patch validation / Windows Update sync |
-| `UpdateIssue` | Windows Update query detected failed updates or update service issues | Update troubleshooting |
+| `PatchLevelBehind` | Build is below the supported baseline or the last patch installation is older than `PatchStaleDays` | Update scan is triggered; installation stays with the update policy |
+| `UpdateIssue` | Update installs failed without a later success, the update agent cannot be queried, or the Windows Update service is disabled or missing | Update scan is triggered (optional component reset); then update troubleshooting |
 | `EscalateStorage` | Storage/file-system indicators | Hardware/OEM analysis |
 | `EscalateDriver` | PnP/critical driver issue | Driver/firmware review |
 | `RepeatOffender` | Threshold of repeated repairs reached | Root-cause analysis / rebuild decision |
@@ -83,20 +84,37 @@ The detection queries the local Windows Update agent and captures the following 
 - `WindowsUpdate.CurrentVersion` - OS version
 - `WindowsUpdate.UBR` - update build revision
 - `WindowsUpdate.PendingUpdates` - number of available but not installed updates
-- `WindowsUpdate.ServiceStatus` - state of the Windows Update service
-- `WindowsUpdate.AutomaticUpdateEnabled` - whether automatic updates are enabled
-- `WindowsUpdate.LastError` - last Windows Update error code
-- `WindowsUpdate.LastScanTime` - last scan timestamp
+- `WindowsUpdate.ServiceStatus` / `WindowsUpdate.ServiceStartType` - state and start type of the Windows Update service
+- `WindowsUpdate.LastScanTime` - time of the local agent query
 - `WindowsUpdate.LastInstallationTime` - last patch installation time
-- `WindowsUpdate.FailedUpdates` - failed update entries from the agent history
+- `WindowsUpdate.FailedUpdates` - updates whose installation failed or was aborted and that did not succeed later
 
-The detection treats a client as stale or out-of-policy when one of the following is true:
+The detection reports `PatchLevelBehind` when one of the following is true:
 
-- current build is below the configured minimum supported build
-- last patch installation is older than the configured stale threshold
-- there are pending updates waiting to be installed
-- the Windows Update service is not running
-- the Update agent has a non-zero error code or failed update history
+- current build is below the configured minimum supported build (`MinimumSupportedBuild`)
+- last patch installation is older than the configured stale threshold (`PatchStaleDays`, default 45)
+
+It reports `UpdateIssue` when one of the following is true:
+
+- an update installation failed or was aborted and the same update has not installed successfully since
+- the Windows Update agent cannot be queried
+- the Windows Update service is disabled or missing
+
+Deliberately **not** a finding: a stopped Windows Update service (it is a demand-start service), pending updates on their own (update rings defer and schedule them), driver and optional updates.
+
+When several findings apply, the status follows this order: `Error`, `EscalateStorage`, `EscalateDriver`, `RepeatOffender`, `Repairable`, `UpdateIssue`, `PatchLevelBehind`, `RebootRequired`, `Healthy`. Component store corruption ranks above the update states because it is a common cause of them.
+
+### What the remediation does
+
+| Detected state | Remediation action | Intune result |
+|---|---|---|
+| `Repairable` | `DISM /RestoreHealth` and `sfc /scannow`; postponed while component servicing waits for a restart | Success when the device is `Healthy` or `RebootRequired` afterwards |
+| `UpdateIssue`, `PatchLevelBehind` | Triggers a Windows Update scan (`UsoClient StartScan`); renames `SoftwareDistribution` and `catroot2` first only if `ResetWindowsUpdateComponents` is enabled | Success when the scan was triggered |
+| Any other state | Nothing (`Blocked`) | Detection does not start remediation for these states |
+
+The remediation never installs updates, restarts the device, clears pending-reboot markers, or changes update policy.
+
+The SCCM scripts turn the Windows Update check off (`CheckWindowsUpdate = $false`) because patch compliance is owned by software updates in Configuration Manager.
 
 This makes the suite useful for both serviceability health and operational patch compliance review.
 
