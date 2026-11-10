@@ -2,14 +2,15 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 function Get-WUHDefaultConfig {
-    [ordered]@{
+    @{
         LookbackDays = 30; MinimumFreeSpaceGB = 20
         StorageEventIds = @(7,11,51,55,98,129,153,157)
         StorageEventWarningCount = 1; StorageEventCriticalCount = 5
         DriverAgeWarningDays = 1095; RepeatOffenderThreshold = 2
         RepairHistoryDays = 90; RepairSource = ''; RepairSourceType = 'WindowsUpdate'; UseLocalRepairSource = $false
         RunSFC = $true; RunComponentCleanup = $false; ResetWindowsUpdateComponents = $false
-        MinimumSupportedBuild = 26100; PatchStaleDays = 30
+        CheckWindowsUpdate = $true; TriggerUpdateScan = $true
+        MinimumSupportedBuild = 26100; PatchStaleDays = 45
         LogRoot = 'C:\ProgramData\WUHealthSuite\Logs'
         StatePath = 'C:\ProgramData\WUHealthSuite\State.json'
     }
@@ -39,6 +40,10 @@ function Save-WUHState([hashtable]$Config,[object]$State) {
     Initialize-WUHPath $Config
     $State | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $Config.StatePath -Encoding UTF8
 }
+function Test-WUHServicingRebootPending {
+    # True when component servicing itself waits for a restart. DISM /RestoreHealth cannot run reliably in that state.
+    Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
+}
 function Test-WUHPendingReboot {
     $paths=@('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending','HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired')
     if($paths | Where-Object {Test-Path $_}){return $true}
@@ -47,6 +52,24 @@ function Test-WUHPendingReboot {
 function Get-WUHStorageEvents([hashtable]$Config) {
     $start=(Get-Date).AddDays(-[int]$Config.LookbackDays)
     try { @(Get-WinEvent -FilterHashtable @{LogName='System';StartTime=$start;Id=$Config.StorageEventIds} -ErrorAction Stop | Select-Object TimeCreated,Id,ProviderName,LevelDisplayName,Message) } catch { @() }
+}
+function Get-WUHFailedUpdates([object[]]$History) {
+    # $History is newest first. An entry counts as failed only when the install failed or was aborted
+    # (ResultCode 4 or 5) and the same update has no newer successful install (ResultCode 2 or 3).
+    # In-progress and not-started entries (codes 1 and 0) are not failures.
+    $succeeded=@{}; $failed=@()
+    foreach($entry in @($History)){
+        if(-not $entry -or [string]::IsNullOrWhiteSpace([string]$entry.Title)){ continue }
+        if($null -ne $entry.Operation -and [int]$entry.Operation -ne 1){ continue }
+        $title=[string]$entry.Title
+        $code=[int]$entry.ResultCode
+        if($code -eq 2 -or $code -eq 3){ $succeeded[$title]=$true; continue }
+        if(($code -eq 4 -or $code -eq 5) -and -not $succeeded.ContainsKey($title)){
+            $succeeded[$title]=$true
+            $failed += [pscustomobject]@{ Date=$entry.Date; Title=$title; ResultCode=$code }
+        }
+    }
+    $failed
 }
 function Get-WUHUpdateStatus {
     param(
@@ -65,8 +88,7 @@ function Get-WUHUpdateStatus {
         PendingUpdates=0;
         FailedUpdates=@();
         ServiceStatus=$null;
-        AutomaticUpdateEnabled=$null;
-        LastError=$null;
+        ServiceStartType=$null;
         AgentVersion=$null
     }
     try {
@@ -77,61 +99,111 @@ function Get-WUHUpdateStatus {
         if($nt){ $state.UBR=$nt.UBR }
     } catch {}
     try {
-        $hotfix = Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1
-        if($hotfix -and $hotfix.InstalledOn){ $state.LastInstallationTime = [datetime]$hotfix.InstalledOn }
+        $hotfix = Get-HotFix | Where-Object { $_.InstalledOn } | Sort-Object InstalledOn -Descending | Select-Object -First 1
+        if($hotfix){ $state.LastInstallationTime = [datetime]$hotfix.InstalledOn }
     } catch {}
-    try { $svc=Get-Service -Name wuauserv -ErrorAction Stop; $state.ServiceStatus=$svc.Status.ToString() } catch {}
-    try { $au=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update' -ErrorAction Stop; if($null -ne $au.AutomaticUpdateEnabled){ $state.AutomaticUpdateEnabled=$au.AutomaticUpdateEnabled }; if($null -ne $au.LastError){ $state.LastError=$au.LastError } } catch {}
+    try {
+        $svc=Get-Service -Name wuauserv -ErrorAction Stop
+        $state.ServiceStatus=$svc.Status.ToString()
+        $state.ServiceStartType=$svc.StartType.ToString()
+    } catch { $state.ServiceStatus='Missing' }
+    try { $state.AgentVersion=(New-Object -ComObject Microsoft.Update.AgentInfo).GetInfo('ProductVersionString') } catch {}
+    $searcher=$null
     try {
         $session=New-Object -ComObject Microsoft.Update.Session
         $searcher=$session.CreateUpdateSearcher()
-        $state.AgentVersion=$searcher.Version
+        # Offline search: tests the agent and its database without starting a network scan.
+        $searcher.Online=$false
         $pending=$searcher.Search('IsInstalled=0 and IsHidden=0')
-        $state.PendingUpdates=@($pending.Updates).Count
+        # Count software updates only. Drivers (Type 2) and optional updates (BrowseOnly) are not a patch gap.
+        $count=0
+        foreach($update in $pending.Updates){
+            $optional=$false; try { $optional=[bool]$update.BrowseOnly } catch {}
+            if([int]$update.Type -eq 1 -and -not $optional){ $count++ }
+        }
+        $state.PendingUpdates=$count
         $state.LastScanTime=(Get-Date).ToString('o')
     } catch {
         $state.HasProblems=$true
         $state.Status='QueryFailed'
     }
-    try {
-        $history=@($searcher.QueryHistory(0,30))
-        $failed=@($history | Where-Object {
-            $_ -and $_.ResultCode -ne 2 -and $_.ResultCode -ne 3 -and $_.ResultCode -ne 0
-        })
-        if($failed.Count -gt 0){
-            $state.FailedUpdates=@($failed | Select-Object -Property Date,Title,ResultCode)
-            $state.HasProblems=$true
-            $state.Status='UpdateIssues'
-        }
-    } catch {}
-    if($state.ServiceStatus -and $state.ServiceStatus -ne 'Running'){
+    if($searcher){
+        try {
+            $total=$searcher.GetTotalHistoryCount()
+            if($total -gt 0){
+                $failed=Get-WUHFailedUpdates @($searcher.QueryHistory(0,[math]::Min(50,$total)))
+                if(@($failed).Count -gt 0){
+                    $state.FailedUpdates=@($failed)
+                    $state.HasProblems=$true
+                    if($state.Status -ne 'QueryFailed'){ $state.Status='UpdateIssues' }
+                }
+            }
+        } catch {}
+    }
+    # wuauserv is a demand-start service: "Stopped" is normal. Only "Disabled" or "Missing" is a problem.
+    if($state.ServiceStatus -eq 'Missing' -or $state.ServiceStartType -eq 'Disabled'){
         $state.HasProblems=$true
         $state.Status='UpdateServiceIssue'
     }
-    if($null -ne $state.LastError -and [int]$state.LastError -ne 0){
-        $state.HasProblems=$true
-        $state.Status='UpdateError'
-    }
     if($state.CurrentBuild -and $Config.MinimumSupportedBuild -and [int]$state.CurrentBuild -lt [int]$Config.MinimumSupportedBuild){
         $state.PatchLevelBehind=$true
-        $state.Status='PatchLevelBehind'
     }
-    if($state.LastInstallationTime){
+    if($state.LastInstallationTime -and $Config.PatchStaleDays){
         $ageDays = ((Get-Date) - [datetime]$state.LastInstallationTime).TotalDays
-        if($Config.PatchStaleDays -and $ageDays -gt [double]$Config.PatchStaleDays){
-            $state.PatchLevelBehind=$true
-            if($state.Status -notin @('UpdateIssues','UpdateServiceIssue','UpdateError','QueryFailed')){ $state.Status='PatchLevelBehind' }
-        }
+        if($ageDays -gt [double]$Config.PatchStaleDays){ $state.PatchLevelBehind=$true }
     }
-    if($state.PendingUpdates -gt 0){
-        $state.PatchLevelBehind=$true
-        if($state.Status -notin @('UpdateIssues','UpdateServiceIssue','UpdateError','QueryFailed')){ $state.Status='PendingUpdates' }
-    }
-    if(-not $state.HasProblems -and -not $state.PatchLevelBehind){
-        if($state.PendingUpdates -gt 0){ $state.Status='PendingUpdates' }
-        elseif($state.ServiceStatus -eq 'Running'){ $state.Status='Healthy' }
+    # Pending updates alone are not a finding: update rings defer and schedule them on purpose.
+    if(-not $state.HasProblems){
+        if($state.PatchLevelBehind){ $state.Status='PatchLevelBehind' }
+        elseif($state.PendingUpdates -gt 0){ $state.Status='PendingUpdates' }
+        else { $state.Status='Healthy' }
     }
     [pscustomobject]$state
+}
+function Resolve-WUHStatus {
+    # Pure decision function: turns collected signals into one status. Order matters.
+    # Component store corruption ranks above update findings because it is a common cause of them.
+    param(
+        [int]$ErrorCount=0,[bool]$StorageBad=$false,[bool]$DriverBad=$false,
+        [int]$RepairCount=0,[int]$RepeatOffenderThreshold=2,
+        [bool]$DISMUnrepairable=$false,[bool]$DISMRepairable=$false,[bool]$SFCViolation=$false,
+        [bool]$UpdateHasProblems=$false,[bool]$PatchLevelBehind=$false,[bool]$PendingReboot=$false
+    )
+    if($ErrorCount -gt 0){ return 'Error' }
+    if($StorageBad){ return 'EscalateStorage' }
+    if($DriverBad){ return 'EscalateDriver' }
+    if($RepairCount -ge $RepeatOffenderThreshold){ return 'RepeatOffender' }
+    if($DISMUnrepairable){ return 'RepeatOffender' }
+    if($DISMRepairable -or $SFCViolation){ return 'Repairable' }
+    if($UpdateHasProblems){ return 'UpdateIssue' }
+    if($PatchLevelBehind){ return 'PatchLevelBehind' }
+    if($PendingReboot){ return 'RebootRequired' }
+    'Healthy'
+}
+function ConvertTo-WUHComponentStoreState([string]$Text) {
+    # Fallback parser for "dism /Online /Cleanup-Image /CheckHealth" output (English and German).
+    # Checks run from most to least specific: "No component store corruption detected" must not count as corruption.
+    # A dot stands in for umlauts so the script stays pure ASCII (Windows PowerShell 5.1 reads BOM-less files as ANSI).
+    if([string]::IsNullOrWhiteSpace($Text)){ return 'Unknown' }
+    if($Text -match 'No component store corruption detected|keine Komponentenspeicherbesch.digung'){ return 'Healthy' }
+    if($Text -match 'cannot be repaired|not repairable|non-repairable|nicht repariert werden|nicht reparierbar'){ return 'NonRepairable' }
+    if($Text -match 'is repairable|can be repaired|kann repariert werden|reparierbar'){ return 'Repairable' }
+    'Unknown'
+}
+function Get-WUHComponentStoreState {
+    # Prefers the DISM cmdlet because its result does not depend on the display language.
+    try {
+        $image=Repair-WindowsImage -Online -CheckHealth -ErrorAction Stop
+        return [pscustomobject]@{ State=[string]$image.ImageHealthState; ExitCode=0; Source='Cmdlet' }
+    } catch {}
+    $dism=Invoke-WUHProcess dism.exe '/Online /Cleanup-Image /CheckHealth' 20
+    [pscustomobject]@{ State=(ConvertTo-WUHComponentStoreState ([string]$dism.StdOut)); ExitCode=$dism.ExitCode; Source='DismExe' }
+}
+function Test-WUHSfcViolation([string]$Text) {
+    # Input is the NUL-stripped output of "sfc /verifyonly" (English and German).
+    if([string]::IsNullOrWhiteSpace($Text)){ return $false }
+    if($Text -match 'did not find any integrity violations|keine Integrit.tsverletzungen'){ return $false }
+    [bool]($Text -match 'found integrity violations|Integrit.tsverletzungen gefunden')
 }
 function Get-WUHHealth([hashtable]$Config) {
     Initialize-WUHPath $Config
@@ -148,55 +220,79 @@ function Get-WUHHealth([hashtable]$Config) {
     try {$pnp=@(Get-CimInstance Win32_PnPEntity -ErrorAction Stop | Where-Object {$_.ConfigManagerErrorCode -ne 0} | Select Name,PNPClass,ConfigManagerErrorCode,Manufacturer)}catch{$pnp=@()}
     $signals.PnPErrors=$pnp
     $driverBad=@($pnp|Where-Object {$_.PNPClass -match 'SCSIAdapter|HDC|DiskDrive|System'}).Count -gt 0
-    $signals.WindowsUpdate=Get-WUHUpdateStatus $Config
-    $dism=Invoke-WUHProcess dism.exe '/Online /Cleanup-Image /CheckHealth' 20
-    $signals.DISMExitCode=$dism.ExitCode
-    $signals.DISMRepairable=($dism.StdOut -match 'repairable|reparierbar|component store corruption detected|Komponentenspeicher.*beschädigt')
-    $signals.DISMUnrepairable=($dism.StdOut -match 'non-repairable|nicht reparierbar')
+    $updateProblems=$false; $patchBehind=$false
+    if($Config.CheckWindowsUpdate){
+        $signals.WindowsUpdate=Get-WUHUpdateStatus $Config
+        $updateProblems=[bool]$signals.WindowsUpdate.HasProblems; $patchBehind=[bool]$signals.WindowsUpdate.PatchLevelBehind
+    }
+    $store=Get-WUHComponentStoreState
+    $signals.ComponentStoreState=$store.State
+    $signals.DISMExitCode=$store.ExitCode
+    $signals.DISMRepairable=($store.State -eq 'Repairable')
+    $signals.DISMUnrepairable=($store.State -eq 'NonRepairable')
     $sfc=Invoke-WUHProcess sfc.exe '/verifyonly' 60
     $signals.SFCExitCode=$sfc.ExitCode
-    $signals.SFCViolation=($sfc.StdOut -match 'integrity violations|Integritätsverletzungen') -and ($sfc.StdOut -notmatch 'did not find|keine Integritätsverletzungen')
+    # sfc.exe writes UTF-16. Read as ANSI the text has a NUL between all characters, so strip them before matching.
+    $sfcText=([string]$sfc.StdOut) -replace "`0",''
+    $signals.SFCViolation=Test-WUHSfcViolation $sfcText
     $signals.PendingReboot=Test-WUHPendingReboot
     $state=Get-WUHState $Config
     $cut=(Get-Date).AddDays(-[int]$Config.RepairHistoryDays)
     $recent=@($state.RepairHistory|Where-Object {try{[datetime]$_.Time -ge $cut}catch{$false}})
     $signals.RepairCount=$recent.Count
-    $status='Healthy'
-    if($errors.Count){$status='Error'}
-    elseif($storageBad){$status='EscalateStorage'}
-    elseif($driverBad){$status='EscalateDriver'}
-    elseif($signals.WindowsUpdate.PatchLevelBehind){$status='PatchLevelBehind'}
-    elseif($signals.WindowsUpdate.HasProblems){$status='UpdateIssue'}
-    elseif($recent.Count -ge [int]$Config.RepeatOffenderThreshold){$status='RepeatOffender'}
-    elseif($signals.DISMUnrepairable){$status='RepeatOffender'}
-    elseif($signals.DISMRepairable -or $signals.SFCViolation){$status='Repairable'}
-    elseif($signals.PendingReboot){$status='RebootRequired'}
+    $status=Resolve-WUHStatus -ErrorCount $errors.Count -StorageBad $storageBad -DriverBad $driverBad -RepairCount $recent.Count -RepeatOffenderThreshold ([int]$Config.RepeatOffenderThreshold) -DISMUnrepairable ([bool]$signals.DISMUnrepairable) -DISMRepairable ([bool]$signals.DISMRepairable) -SFCViolation ([bool]$signals.SFCViolation) -UpdateHasProblems $updateProblems -PatchLevelBehind $patchBehind -PendingReboot ([bool]$signals.PendingReboot)
     [pscustomobject]@{SchemaVersion='1.0';Timestamp=(Get-Date).ToString('o');ComputerName=$env:COMPUTERNAME;Status=$status;Manufacturer=$cs.Manufacturer;Model=$cs.Model;OSVersion=$os.Version;Build=$os.BuildNumber;BIOS=$bios.SMBIOSBIOSVersion;Warnings=$warnings;Errors=$errors;Signals=$signals}
 }
 function Get-WUHRepairCommandArgs([hashtable]$Config) {
-    $args = '/Online /Cleanup-Image /RestoreHealth'
     if ($Config.UseLocalRepairSource -or (-not [string]::IsNullOrWhiteSpace($Config.RepairSource))) {
         Write-WUHLog $Config 'Local DISM repair source ignored; using Windows Update / online repair only.' 'WARN'
-        return $args
     }
-    return $args
+    '/Online /Cleanup-Image /RestoreHealth'
+}
+function Reset-WUHUpdateComponents([hashtable]$Config) {
+    # Renames (never deletes) the update cache folders so Windows rebuilds them. Off by default.
+    Write-WUHLog $Config 'Resetting Windows Update components (rename SoftwareDistribution and catroot2)'
+    $stamp=Get-Date -Format yyyyMMddHHmmss
+    foreach($svc in 'bits','wuauserv','cryptsvc'){Stop-Service $svc -Force -ErrorAction SilentlyContinue}
+    Rename-Item "$env:windir\SoftwareDistribution" "SoftwareDistribution.wuh-old-$stamp" -ErrorAction SilentlyContinue
+    Rename-Item "$env:windir\System32\catroot2" "catroot2.wuh-old-$stamp" -ErrorAction SilentlyContinue
+    foreach($svc in 'cryptsvc','wuauserv','bits'){Start-Service $svc -ErrorAction SilentlyContinue}
+}
+function Invoke-WUHUpdateRemediation([hashtable]$Config,[string]$PreStatus) {
+    # Safe actions for UpdateIssue / PatchLevelBehind: optional component reset, then ask Windows to scan.
+    # Installation stays with the update policy (update rings, Autopatch); nothing is forced here.
+    Write-WUHLog $Config "Update remediation start (state $PreStatus)"
+    $actions=@()
+    if($Config.ResetWindowsUpdateComponents){ Reset-WUHUpdateComponents $Config; $actions += 'ComponentReset' }
+    $scan=$false
+    if($Config.TriggerUpdateScan){
+        $uso=Join-Path $env:windir 'System32\UsoClient.exe'
+        if(Test-Path $uso){
+            try { Invoke-WUHProcess $uso 'StartScan' 5 | Out-Null; $scan=$true; $actions += 'ScanTriggered' }
+            catch { Write-WUHLog $Config "UsoClient StartScan failed: $($_.Exception.Message)" 'WARN' }
+        } else { Write-WUHLog $Config 'UsoClient.exe not found; scan not triggered' 'WARN' }
+    }
+    $status=if($scan){'UpdateScanTriggered'}elseif($actions.Count){'UpdateActionTaken'}else{'NoActionTaken'}
+    Write-WUHLog $Config "Update remediation finished: $status ($($actions -join ','))"
+    [pscustomobject]@{Status=$status;PreStatus=$PreStatus;Actions=$actions;RebootRequired=(Test-WUHPendingReboot)}
 }
 function Invoke-WUHRepair([hashtable]$Config) {
     Initialize-WUHPath $Config; Write-WUHLog $Config 'Repair start'
     $pre=Get-WUHHealth $Config
-    if($pre.Status -notin @('Repairable')){Write-WUHLog $Config "Repair blocked by state $($pre.Status)" 'WARN'; return [pscustomobject]@{Status='Blocked';PreStatus=$pre.Status}}
-    if($Config.ResetWindowsUpdateComponents){
-        foreach($svc in 'bits','wuauserv','cryptsvc'){Stop-Service $svc -Force -ErrorAction SilentlyContinue}
-        Rename-Item "$env:windir\SoftwareDistribution" "SoftwareDistribution.wuh-old-$(Get-Date -Format yyyyMMddHHmmss)" -ErrorAction SilentlyContinue
-        Rename-Item "$env:windir\System32\catroot2" "catroot2.wuh-old-$(Get-Date -Format yyyyMMddHHmmss)" -ErrorAction SilentlyContinue
-        foreach($svc in 'cryptsvc','wuauserv','bits'){Start-Service $svc -ErrorAction SilentlyContinue}
+    if($pre.Status -in @('UpdateIssue','PatchLevelBehind')){ return Invoke-WUHUpdateRemediation $Config $pre.Status }
+    if($pre.Status -ne 'Repairable'){Write-WUHLog $Config "Repair blocked by state $($pre.Status)" 'WARN'; return [pscustomobject]@{Status='Blocked';PreStatus=$pre.Status}}
+    if(Test-WUHServicingRebootPending){
+        # A servicing restart is outstanding: repairing now would fail or be undone. Report it and repair on the next run.
+        Write-WUHLog $Config 'Repair postponed: component servicing is waiting for a restart' 'WARN'
+        return [pscustomobject]@{Status='RebootRequired';PreStatus=$pre.Status;RebootRequired=$true}
     }
-    $args = Get-WUHRepairCommandArgs $Config
-    $dism=Invoke-WUHProcess dism.exe $args 120
+    if($Config.ResetWindowsUpdateComponents){ Reset-WUHUpdateComponents $Config }
+    $dismArgs = Get-WUHRepairCommandArgs $Config
+    $dism=Invoke-WUHProcess dism.exe $dismArgs 120
     $sfc=$null; if($Config.RunSFC){$sfc=Invoke-WUHProcess sfc.exe '/scannow' 90}
     if($Config.RunComponentCleanup){Invoke-WUHProcess dism.exe '/Online /Cleanup-Image /StartComponentCleanup' 120 | Out-Null}
     $state=Get-WUHState $Config; $history=@($state.RepairHistory); $history += [pscustomobject]@{Time=(Get-Date).ToString('o');DISM=$dism.ExitCode;SFC=if($sfc){$sfc.ExitCode}else{$null}}
     $new=[pscustomobject]@{RepairHistory=$history;LastResult="DISM=$($dism.ExitCode);SFC=$(if($sfc){$sfc.ExitCode}else{'Skipped'})";LastRun=(Get-Date).ToString('o')}; Save-WUHState $Config $new
     $post=Get-WUHHealth $Config; Write-WUHLog $Config "Repair finished: $($post.Status)"
-    [pscustomobject]@{Status=$post.Status;DISMExitCode=$dism.ExitCode;SFCExitCode=if($sfc){$sfc.ExitCode}else{$null};RebootRequired=(Test-WUHPendingReboot)}
+    [pscustomobject]@{Status=$post.Status;PreStatus=$pre.Status;DISMExitCode=$dism.ExitCode;SFCExitCode=if($sfc){$sfc.ExitCode}else{$null};RebootRequired=(Test-WUHPendingReboot)}
 }
